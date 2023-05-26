@@ -83,6 +83,4 @@ public class CalendarInfo {
 
         con.disconnect();
     }
-
-    public
 }
