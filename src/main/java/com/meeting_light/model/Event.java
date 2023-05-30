@@ -1,4 +1,4 @@
-package com.meeting_light;
+package com.meeting_light.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

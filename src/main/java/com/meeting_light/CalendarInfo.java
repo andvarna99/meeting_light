@@ -1,11 +1,14 @@
 package com.meeting_light;
 
 
+import com.meeting_light.model.Event;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -15,25 +18,72 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 
+@SpringBootApplication
+@EnableScheduling
+@Component
 public class CalendarInfo {
+
+    static Properties props = new Properties();
+
+    public static InputStream is;
+
+    static {
+        try {
+            is = new FileInputStream("config.properties");
+            props.load(is);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String plugIP = props.getProperty("IP_ADDRESS");
+    public static int plugPort = 9999;
+
+    public static net.insxnity.hs100.HS100 plug = new net.insxnity.hs100.HS100(plugIP, plugPort);
+
     public static String timeZone = "America/Chicago";
 
     public static ZonedDateTime now = ZonedDateTime.now(ZoneId.of(timeZone));
 
+    public CalendarInfo() throws FileNotFoundException {
+    }
 
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args){
+
         String url = generateURL(timeZone);
 
-        String fullResponse = sendGetRequest(url);
+        String fullResponse = null;
+        try {
+            fullResponse = sendGetRequest(url);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         List<Event> events = printEvents(fullResponse);
 
         System.out.println(events.toString());
 
         System.out.println(checkIfBusy(events, now));
+
+        if(checkIfBusy(events, now)){
+            try {
+                turnLightOn(plug);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }else {
+            try {
+                turnLightOff(plug);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     public static String generateURL(String timeZone){
@@ -47,7 +97,7 @@ public class CalendarInfo {
         String timeMin = URLEncoder.encode(formatter.format(startOfToday), StandardCharsets.UTF_8);
         String timeMax = URLEncoder.encode(formatter.format(startOfTomorrow), StandardCharsets.UTF_8);
 
-        String urlTemplate = "https://clients6.google.com/calendar/v3/calendars/andrea.h.varnado@gmail.com/events?calendarId=andrea.h.varnado%40gmail.com&singleEvents=true&timeZone={timeZone}&maxAttendees=1&maxResults=250&sanitizeHtml=true&timeMin={timeMin}&timeMax={timeMax}&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs";
+        String urlTemplate = props.getProperty("URL_TEMPLATE");
 
         return urlTemplate
                 .replace("{timeZone}", URLEncoder.encode(timeZone, StandardCharsets.UTF_8))
@@ -65,13 +115,11 @@ public class CalendarInfo {
         InputStreamReader in = new InputStreamReader(con.getInputStream());
 //      reads text line by line,
         BufferedReader br = new BufferedReader(in);
-//        System.out.println(br);
         String output;
         StringBuilder responseBuilder = new StringBuilder();
 
 
         while((output = br.readLine()) != null){
-//            System.out.println(output);
             responseBuilder.append(output);
         }
 
@@ -89,13 +137,18 @@ public class CalendarInfo {
             JSONObject item = jsonArr.getJSONObject(i);
             String startDateTime = item.getJSONObject("start").getString("dateTime");
             String endDateTime = item.getJSONObject("end").getString("dateTime");
-//            System.out.println("Start: " + startDateTime);
-//            System.out.println("End: " + endDateTime);
             ZonedDateTime zonedStartDateTime = ZonedDateTime.parse(startDateTime);
             ZonedDateTime zonedEndDateTime = ZonedDateTime.parse(endDateTime);
             events.add(new Event(zonedStartDateTime,zonedEndDateTime));
         }
         return events;
+    }
+    public static void turnLightOn(net.insxnity.hs100.HS100 hs100) throws IOException {
+        hs100.switchOn();
+    }
+
+    private static void turnLightOff(net.insxnity.hs100.HS100 hs100) throws IOException {
+        hs100.switchOff();
     }
 
     public static boolean checkIfBusy(List<Event> events, ZonedDateTime timeToCheck){
