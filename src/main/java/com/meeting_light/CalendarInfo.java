@@ -22,10 +22,18 @@ import java.util.Date;
 
 
 public class CalendarInfo {
+    public static String timeZone = "America/Chicago";
+
+
     public static void main(String[] args) throws Exception {
+        String url = generateURL(timeZone);
 
-        String timeZone = "America/Chicago";
+        String fullResponse = sendGetRequest(url);
 
+        printEvents(fullResponse);
+    }
+
+    public static String generateURL(String timeZone){
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of(timeZone));
 
         ZonedDateTime startOfToday = now.toLocalDate().atStartOfDay(now.getZone());
@@ -39,16 +47,13 @@ public class CalendarInfo {
 
         String urlTemplate = "https://clients6.google.com/calendar/v3/calendars/andrea.h.varnado@gmail.com/events?calendarId=andrea.h.varnado%40gmail.com&singleEvents=true&timeZone={timeZone}&maxAttendees=1&maxResults=250&sanitizeHtml=true&timeMin={timeMin}&timeMax={timeMax}&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs";
 
-        String url = urlTemplate
+        return urlTemplate
                 .replace("{timeZone}", URLEncoder.encode(timeZone, StandardCharsets.UTF_8))
                 .replace("{timeMin}", timeMin)
                 .replace("{timeMax}", timeMax);
+    }
 
-        System.out.println(url);
-
-
-
-//        URL url = new URL("https://clients6.google.com/calendar/v3/calendars/andrea.h.varnado@gmail.com/events?calendarId=andrea.h.varnado%40gmail.com&singleEvents=true&timeZone=America%2FChicago&maxAttendees=1&maxResults=250&sanitizeHtml=true&timeMin=2023-04-30T00%3A00%3A00-05%3A00&timeMax=2023-06-04T00%3A00%3A00-05%3A00&key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs");
+    public static String sendGetRequest(String url)throws Exception{
         URL newUrl = new URL(url);
         HttpURLConnection con = (HttpURLConnection) newUrl.openConnection();
         con.setRequestMethod("GET");
@@ -68,7 +73,12 @@ public class CalendarInfo {
             responseBuilder.append(output);
         }
 
-        String fullResponse = responseBuilder.toString();
+        con.disconnect();
+
+        return responseBuilder.toString();
+    }
+
+    public static void printEvents(String fullResponse){
         JSONObject jsonObj = new JSONObject(fullResponse);
         JSONArray jsonArr = jsonObj.getJSONArray("items");
 
@@ -79,8 +89,5 @@ public class CalendarInfo {
             System.out.println("Start: " + startDateTime);
             System.out.println("End: " + endDateTime);
         }
-
-
-        con.disconnect();
     }
 }
