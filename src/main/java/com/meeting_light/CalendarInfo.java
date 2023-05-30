@@ -1,9 +1,6 @@
 package com.meeting_light;
 
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -13,16 +10,18 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class CalendarInfo {
     public static String timeZone = "America/Chicago";
+
+    public static ZonedDateTime now = ZonedDateTime.now(ZoneId.of(timeZone));
+
 
 
     public static void main(String[] args) throws Exception {
@@ -30,11 +29,14 @@ public class CalendarInfo {
 
         String fullResponse = sendGetRequest(url);
 
-        printEvents(fullResponse);
+        List<Event> events = printEvents(fullResponse);
+
+        System.out.println(events.toString());
+
+        System.out.println(checkIfBusy(events, now));
     }
 
     public static String generateURL(String timeZone){
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of(timeZone));
 
         ZonedDateTime startOfToday = now.toLocalDate().atStartOfDay(now.getZone());
 
@@ -78,7 +80,8 @@ public class CalendarInfo {
         return responseBuilder.toString();
     }
 
-    public static void printEvents(String fullResponse){
+    public static List<Event> printEvents(String fullResponse){
+        List<Event> events = new ArrayList<>();
         JSONObject jsonObj = new JSONObject(fullResponse);
         JSONArray jsonArr = jsonObj.getJSONArray("items");
 
@@ -86,8 +89,21 @@ public class CalendarInfo {
             JSONObject item = jsonArr.getJSONObject(i);
             String startDateTime = item.getJSONObject("start").getString("dateTime");
             String endDateTime = item.getJSONObject("end").getString("dateTime");
-            System.out.println("Start: " + startDateTime);
-            System.out.println("End: " + endDateTime);
+//            System.out.println("Start: " + startDateTime);
+//            System.out.println("End: " + endDateTime);
+            ZonedDateTime zonedStartDateTime = ZonedDateTime.parse(startDateTime);
+            ZonedDateTime zonedEndDateTime = ZonedDateTime.parse(endDateTime);
+            events.add(new Event(zonedStartDateTime,zonedEndDateTime));
         }
+        return events;
+    }
+
+    public static boolean checkIfBusy(List<Event> events, ZonedDateTime timeToCheck){
+        for (Event event: events) {
+            if(!timeToCheck.isBefore(event.getStartDateTime()) && !timeToCheck.isAfter(event.getEndDateTime())){
+                return true;
+            }
+        }
+        return false;
     }
 }
