@@ -5,8 +5,6 @@ import com.meeting_light.model.Event;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -19,12 +17,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.TimerTask;
 
 
 @SpringBootApplication
-@EnableScheduling
-@Component
-public class CalendarInfo {
+public class CalendarInfo extends TimerTask {
 
     static Properties props = new Properties();
 
@@ -50,11 +47,7 @@ public class CalendarInfo {
 
     public static ZonedDateTime now = ZonedDateTime.now(ZoneId.of(timeZone));
 
-    public CalendarInfo() throws FileNotFoundException {
-    }
-
-
-    public static void main(String[] args){
+    public  void run(){
 
         String url = generateURL(timeZone);
 
